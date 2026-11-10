@@ -1720,7 +1720,7 @@ function Gramito() {
                       <span style={s.stepVal}>{r.cups}</span>
                       <button style={s.stepBtn} onClick={()=>updateOrdRow(i, { cups: r.cups + 1 })}>+</button>
                     </div>
-                    <input type="text" placeholder={t("Nota (ej. sin azúcar)","Note (e.g. no sugar)")} value={r.note} onChange={e=>updateOrdRow(i, { note: e.target.value })} style={s.ordNote} />
+                    <input type="text" placeholder={t("Nota (opcional)","Note (optional)")} value={r.note} onChange={e=>updateOrdRow(i, { note: e.target.value })} style={s.ordNote} />
                     <button style={s.removePhaseBtn} onClick={()=>removeOrdRow(i)}>✕</button>
                   </div>
                 </div>
