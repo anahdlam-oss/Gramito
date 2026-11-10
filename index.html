@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>PourLab</title>
+<title>Gramito</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M43.6 19.5C43 23.5 39.5 27.5 33.5 30.8C27.5 34.1 22.5 38.5 19.8 45C19.3 46 18.2 46.2 17.2 45C14.3 41.5 13.9 35.5 16.5 29C19.5 21.5 26 15 34 12.8C40 11.2 44.5 13.5 43.6 19.5Z' fill='%236A3B2A'/%3E%3Cpath d='M45 17.8C48 20 50.2 25 49.8 31C49.4 38 44.5 44.5 38 48C32 51.2 25 51.2 21.6 47.8C20 46.2 20.3 44.5 22 42.5C25.5 38.2 31 35.4 36.5 32C41.5 28.9 44 24.3 44.2 19.2C44.3 18.3 44.5 17.9 45 17.8Z' fill='%234A281C'/%3E%3C/svg%3E" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -426,6 +427,16 @@ function TabIcon({ id, color, size = 24, px }) {
     <path d="M8 7h8" {...p}/>
     <path d="M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" {...p} strokeWidth="2.4"/>
   </>);
+  else if (id === "bean") body = (<>
+    <g transform="rotate(35 12 12)">
+      <ellipse cx="12" cy="12" rx="6.2" ry="8.8" {...p} fill={color}/>
+      <path d="M12 3.6c-3 2.8 3 5.4 0 8.4c-3 3 3 5.6 0 8.4" {...p} stroke="#fffdfa"/>
+    </g>
+  </>);
+  else if (id === "orders") body = (<>
+    <path d="M6 3h12a1 1 0 0 1 1 1v17l-2.5 -1.5L14 21l-2 -1.5L10 21l-2.5 -1.5L5 21V4a1 1 0 0 1 1 -1z" {...p}/>
+    <path d="M9 8h6M9 12h6" {...p}/>
+  </>);
   else body = (<>
     <path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1 -2 -2z" {...p}/>
     <path d="M6 18a2 2 0 0 1 2 -2h11" {...p}/>
@@ -465,6 +476,17 @@ function PlayIcon({ color, size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path d="M8 5.5v13l10.5 -6.5z" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function BeanLogo({ size = 28 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <path d="M43.6 19.5C43 23.5 39.5 27.5 33.5 30.8C27.5 34.1 22.5 38.5 19.8 45C19.3 46 18.2 46.2 17.2 45C14.3 41.5 13.9 35.5 16.5 29C19.5 21.5 26 15 34 12.8C40 11.2 44.5 13.5 43.6 19.5Z" fill="#6A3B2A"/>
+      <path d="M45 17.8C48 20 50.2 25 49.8 31C49.4 38 44.5 44.5 38 48C32 51.2 25 51.2 21.6 47.8C20 46.2 20.3 44.5 22 42.5C25.5 38.2 31 35.4 36.5 32C41.5 28.9 44 24.3 44.2 19.2C44.3 18.3 44.5 17.9 45 17.8Z" fill="#4A281C"/>
+      <path d="M27.5 16.8Q32 14.8 37.5 14.6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeLinecap="round"/>
+      <path d="M24 42.2Q29 37.6 34 35.6" fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -516,7 +538,7 @@ function formatDatetimeDisplay(str, lang) {
   return d.toLocaleString(lang === "es" ? "es-CO" : "en-US", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit", hour12:false });
 }
 
-function PourLab() {
+function Gramito() {
   const [lang, setLang] = useState("es");
   const [openCat, setOpenCat] = useState(null);
   const t = (es, en) => (lang === "es" ? es : en);
@@ -724,6 +746,158 @@ function PourLab() {
     });
   }, [cbDone, libReady]);
 
+  // ---- Pedidos / comandas ----
+  const ORD_KEY = "pourlab-orders-v1";
+  const [orders, setOrders] = useState([]);
+  const [ordReady, setOrdReady] = useState(false);
+  const [ordView, setOrdView] = useState("list");
+  const [ordOpenId, setOrdOpenId] = useState(null);
+  const [ordName, setOrdName] = useState("");
+  const [ordRows, setOrdRows] = useState([]);
+  const [ordConfirm, setOrdConfirm] = useState(false);
+  const [ordCapturing, setOrdCapturing] = useState(false);
+  const [ordCopied, setOrdCopied] = useState(false);
+  const ordRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ORD_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (Array.isArray(d)) setOrders(d);
+      }
+    } catch (e) {}
+    setOrdReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!ordReady) return;
+    try { localStorage.setItem(ORD_KEY, JSON.stringify(orders)); } catch (e) {}
+  }, [orders, ordReady]);
+
+  function ordOptionLabel(rid) {
+    if (rid === "americano") return "Americano";
+    if (rid === "espresso") return "Espresso";
+    if (rid === "cappuccino") return "Cappuccino";
+    if (rid === "coldbrew") return "Cold Brew";
+    const cat = CATEGORIES.find(c => c.id === rid);
+    if (cat) return sentence(t(cat.label, cat.en));
+    const r = RECIPES[rid];
+    return r ? t(r.name.es, r.name.en) : rid;
+  }
+
+  function ordColor(rid) {
+    if (rid === "americano") return "#623520";
+    if (rid === "espresso") return "#3B1A0A";
+    if (rid === "cappuccino") return "#C68B4E";
+    if (rid === "coldbrew") return COLDBREW_COLOR;
+    if (rid === "moka") return MOKA_COLOR;
+    const cat = CATEGORIES.find(c => c.id === rid);
+    if (cat && cat.recipes[0] && RECIPES[cat.recipes[0]]) return RECIPES[cat.recipes[0]].color;
+    return RECIPES[rid] ? RECIPES[rid].color : "#8B5A35";
+  }
+
+  function canPrepare(rid) {
+    return ["moka","coldbrew","v60","prensa","aeropress","cloth","melitta","chemex"].includes(rid) || !!RECIPES[rid];
+  }
+
+  function newOrder() {
+    setOrdName("");
+    setOrdRows([]);
+    setOrdView("new");
+  }
+
+  function updateOrdRow(i, patch) {
+    setOrdRows(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  }
+
+  function addOrdRow() {
+    setOrdRows(prev => [...prev, { rid: prev.length ? prev[prev.length - 1].rid : "americano", cups:1, note:"" }]);
+  }
+
+  function addOrdItem(rid) {
+    setOrdRows(prev => {
+      const i = prev.findIndex(r => r.rid === rid && !r.note);
+      if (i >= 0) return prev.map((r, idx) => idx === i ? { ...r, cups: r.cups + 1 } : r);
+      return [...prev, { rid, cups:1, note:"" }];
+    });
+  }
+
+  function removeOrdRow(i) {
+    setOrdRows(prev => prev.filter((_, idx) => idx !== i));
+  }
+
+  function createOrder() {
+    const ts = Date.now();
+    const items = ordRows.filter(r => r.cups > 0).map((r, i) => ({ id: `${ts}-${i}`, rid: r.rid, cups: r.cups, note: r.note.trim(), done: false }));
+    if (items.length === 0) return;
+    const num = orders.reduce((m, o) => Math.max(m, o.num || 0), 0) + 1;
+    const order = { id: `${ts}`, num, ts, name: ordName.trim(), items };
+    setOrders(prev => [order, ...prev].slice(0, 100));
+    setOrdOpenId(order.id);
+    setOrdConfirm(false);
+    setOrdView("detail");
+  }
+
+  function toggleItemDone(oid, iid) {
+    setOrders(prev => prev.map(o => o.id === oid ? { ...o, items: o.items.map(it => it.id === iid ? { ...it, done: !it.done } : it) } : o));
+  }
+
+  function deleteOrder(oid) {
+    setOrders(prev => prev.filter(o => o.id !== oid));
+    setOrdOpenId(null);
+    setOrdConfirm(false);
+    setOrdView("list");
+  }
+
+  function prepareItem(it) {
+    if (it.rid === "moka") { openMoka(); return; }
+    if (it.rid === "coldbrew") { openColdBrew(); setCbCoffeeG(30 * it.cups); return; }
+    const recipeKey = { v60:"ultimate", prensa:"frenchpress4min", cloth:"clothfilter" }[it.rid] || it.rid;
+    const r = RECIPES[recipeKey];
+    if (!r) return;
+    openRecipe(recipeKey);
+    const c = r.defaultCoffee * it.cups;
+    setCoffeeG(c);
+    setInputVal(String(c));
+    setRunPhases(r.phases(c, r.ratioGPerL, lang));
+  }
+
+  function orderText(o) {
+    const d = new Date(o.ts);
+    const loc = lang === "es" ? "es-CO" : "en-US";
+    const when = `${d.toLocaleDateString(loc, { day:"2-digit", month:"short", year:"numeric" })} · ${d.toLocaleTimeString(loc, { hour:"2-digit", minute:"2-digit", hour12:false })}`;
+    const head = `${t("COMANDA","ORDER")} #${String(o.num).padStart(3, "0")}${o.name ? " · " + o.name : ""}`;
+    const lines = o.items.map(it => `• ${it.cups} × ${ordOptionLabel(it.rid)}${it.note ? ` (${it.note})` : ""}`);
+    return [head, when, "", ...lines].join("\n");
+  }
+
+  function copyOrderText(o) {
+    const txt = orderText(o);
+    const ok = () => { setOrdCopied(true); setTimeout(() => setOrdCopied(false), 1800); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(() => {});
+    } catch (e) {}
+  }
+
+  function handleDownloadOrder(o) {
+    if (!ordRef.current || !window.html2canvas) return;
+    setOrdCapturing(true);
+    window.html2canvas(ordRef.current.parentElement, { scale:2, backgroundColor:null, useCORS:true })
+      .then(canvas => {
+        setOrdCapturing(false);
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `comanda_${String(o.num).padStart(3, "0")}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }, "image/png");
+      })
+      .catch(() => setOrdCapturing(false));
+  }
+
   // ---- Persistencia: guarda el estado para no perderlo al cambiar de app o recargar ----
   const STORAGE_KEY = "pourlab-state-v1";
   const [hydrated, setHydrated] = useState(false);
@@ -872,7 +1046,7 @@ function PourLab() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `${(coffeeName||"pourlab").replace(/\s+/g,"_")}_${new Date().toISOString().slice(0,10)}.png`;
+          a.download = `${(coffeeName||"gramito").replace(/\s+/g,"_")}_${new Date().toISOString().slice(0,10)}.png`;
           a.click();
           URL.revokeObjectURL(url);
         }, "image/png");
@@ -1336,6 +1510,10 @@ function PourLab() {
     const catColor = c => c.id === "coldbrew" ? COLDBREW_COLOR : c.id === "moka" ? MOKA_COLOR : RECIPES[c.recipes[0]].color;
     const brewerCat = menuBrewer ? CATEGORIES.find(c => c.id === menuBrewer) : null;
     const curEntry = diaryOpenId ? library.diary.find(e => e.id === diaryOpenId) : null;
+    const curOrder = ordOpenId ? orders.find(o => o.id === ordOpenId) : null;
+    const ordDrinkOpts = ["americano","espresso","cappuccino","coldbrew"].map(id => ({ id, label: ordOptionLabel(id) }));
+    const ordMethodOpts = ["v60","prensa","aeropress","cloth","melitta","chemex","moka"].map(id => ({ id, label: ordOptionLabel(id) }));
+    const ordCount = rid => ordRows.filter(r => r.rid === rid).reduce((a, r) => a + r.cups, 0);
     const entryDateShort = ts => {
       const d = new Date(ts);
       return `${d.toLocaleDateString(loc, { day:"2-digit", month:"short", year:"numeric" })} · ${d.toLocaleTimeString(loc, { hour:"2-digit", minute:"2-digit", hour12:false })}`;
@@ -1386,6 +1564,7 @@ function PourLab() {
       { id:"recipes", label:t("Recetas","Recipes") },
       { id:"create",  label:t("Crear","Create") },
       { id:"tools",   label:t("Herramientas","Tools") },
+      { id:"orders",  label:t("Pedidos","Orders") },
     ];
     const goTab = id => { if (id === "create") { openCustomSetup(); return; } setMenuTab(id); setMenuBrewer(null); setDiaryOpenId(null); setDiaryEdit(false); setDiaryConfirm(false); };
     const onTile = cat => {
@@ -1406,7 +1585,7 @@ function PourLab() {
             <div />
             <LangToggle />
           </div>
-          <div style={{...s.appName, display:"flex", alignItems:"center", justifyContent:"center", gap:8}}><TabIcon id="recipes" color="#3d2b1f" size={26} /><span>PourLab</span></div>
+          <div style={{...s.appName, display:"flex", alignItems:"center", justifyContent:"center", gap:0}}><span>Gramito</span><span style={{display:"inline-flex", marginLeft:-3}}><BeanLogo size={32} /></span></div>
 
           {menuTab === "recipes" && !brewerCat && (
             <div style={s.brewGrid}>
@@ -1470,6 +1649,124 @@ function PourLab() {
             </div>
           )}
 
+          {menuTab === "orders" && ordView === "list" && (
+            <div>
+              <button style={{...s.recipeItemBtn, background:CUSTOM_COLOR}} onClick={newOrder}>
+                <span>{t("Nuevo pedido","New order")}</span>
+                <span style={s.chevron}>+</span>
+              </button>
+              {(() => {
+                const open = orders.filter(o => o.items.some(it => !it.done)).sort((a, b) => a.ts - b.ts);
+                const served = orders.filter(o => o.items.every(it => it.done));
+                const row = o => (
+                  <button key={o.id} style={s.diaryItem} onClick={()=>{ setOrdOpenId(o.id); setOrdConfirm(false); setOrdView("detail"); }}>
+                    <span style={{...s.diaryDot, background: o.items.every(it => it.done) ? "#c7bba8" : CUSTOM_COLOR}} />
+                    <span style={{flex:1, minWidth:0, textAlign:"left"}}>
+                      <div style={s.diaryTitle}>#{String(o.num).padStart(3, "0")}{o.name ? ` · ${o.name}` : ""}</div>
+                      <div style={s.diarySub}>{o.items.map(it => `${it.cups} × ${ordOptionLabel(it.rid)}`).join(" · ")}</div>
+                      <div style={s.diaryMetrics}>{o.items.filter(it => it.done).length}/{o.items.length} {t("listas","ready")}</div>
+                    </span>
+                    <span style={s.chevronDark}>›</span>
+                  </button>
+                );
+                return (
+                  <>
+                    <div style={{...s.categoryLabel, marginTop:18, marginBottom:12}}>{t("ABIERTOS","OPEN")}</div>
+                    {open.length === 0 ? <div style={s.comingSoon}>{t("No hay pedidos abiertos","No open orders")}</div> : open.map(row)}
+                    {served.length > 0 && (
+                      <>
+                        <div style={{...s.categoryLabel, marginTop:18, marginBottom:12}}>{t("ENTREGADOS","SERVED")}</div>
+                        {served.slice(0, 10).map(row)}
+                      </>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {menuTab === "orders" && ordView === "new" && (
+            <div>
+              <button style={{...s.backBtn, color:CUSTOM_COLOR}} onClick={()=>setOrdView("list")}>{t("‹ Pedidos","‹ Orders")}</button>
+              <div style={{...s.eyebrow, color:CUSTOM_COLOR, margin:"8px 0 12px", letterSpacing:"0.08em"}}>{t("NUEVO PEDIDO","NEW ORDER")}</div>
+              <input type="text" placeholder={t("Nombre o mesa","Name or table")} value={ordName} onChange={e=>setOrdName(e.target.value)} style={{...s.input, fontSize:14}} />
+              <div style={{...s.categoryLabel, marginTop:16, marginBottom:10}}>{t("Bebidas","Drinks")}</div>
+              <div style={s.chipGrid}>
+                {ordDrinkOpts.map(o => (
+                  <button key={o.id} style={{...s.chip, background:ordColor(o.id)}} onClick={()=>addOrdItem(o.id)}>
+                    <span style={s.chipIcon}>{o.id === "coldbrew" ? <BrewerIcon id="coldbrew" color="#fffdfa" size={22} px={1.6} /> : <TabIcon id="recipes" color="#fffdfa" size={22} />}</span>
+                    <span>{o.label}</span>
+                    {ordCount(o.id) > 0 && <span style={s.chipBadge}>{ordCount(o.id)}</span>}
+                  </button>
+                ))}
+              </div>
+              <div style={{...s.categoryLabel, marginTop:18, marginBottom:10}}>{t("Método","Method")}</div>
+              <div style={s.chipGrid}>
+                {ordMethodOpts.map(o => (
+                  <button key={o.id} style={{...s.chip, background:ordColor(o.id)}} onClick={()=>addOrdItem(o.id)}>
+                    <span style={s.chipIcon}><BrewerIcon id={o.id} color="#fffdfa" size={22} px={1.6} /></span>
+                    <span>{o.label}</span>
+                    {ordCount(o.id) > 0 && <span style={s.chipBadge}>{ordCount(o.id)}</span>}
+                  </button>
+                ))}
+              </div>
+              {ordRows.length > 0 && <div style={{...s.categoryLabel, marginTop:20, marginBottom:0}}>{t("Tu pedido","Your order")}</div>}
+              {ordRows.map((r, i) => (
+                <div key={i} style={s.ordRow}>
+                  <div style={{...s.ordItemTitle, color:ordColor(r.rid)}}>{ordOptionLabel(r.rid)}</div>
+                  <div style={s.ordRowLine}>
+                    <div style={s.stepper}>
+                      <button style={s.stepBtn} onClick={()=>updateOrdRow(i, { cups: Math.max(1, r.cups - 1) })}>−</button>
+                      <span style={s.stepVal}>{r.cups}</span>
+                      <button style={s.stepBtn} onClick={()=>updateOrdRow(i, { cups: r.cups + 1 })}>+</button>
+                    </div>
+                    <input type="text" placeholder={t("Nota (ej. sin azúcar)","Note (e.g. no sugar)")} value={r.note} onChange={e=>updateOrdRow(i, { note: e.target.value })} style={s.ordNote} />
+                    <button style={s.removePhaseBtn} onClick={()=>removeOrdRow(i)}>✕</button>
+                  </div>
+                </div>
+              ))}
+              <button style={{...s.startBtn, width:"100%", marginTop:16, background:CUSTOM_COLOR, boxShadow:`0 8px 20px ${hexToRgba(CUSTOM_COLOR,0.35)}`, opacity: ordRows.length ? 1 : 0.45}} onClick={createOrder}>{t("Generar comanda","Create order")}</button>
+            </div>
+          )}
+
+          {menuTab === "orders" && ordView === "detail" && curOrder && (
+            <div>
+              <button style={{...s.backBtn, color:CUSTOM_COLOR}} onClick={()=>setOrdView("list")}>{t("‹ Pedidos","‹ Orders")}</button>
+              <div style={{...s.eyebrow, color:CUSTOM_COLOR, margin:"8px 0 4px", letterSpacing:"0.08em"}}>{t("COMANDA","ORDER")} #{String(curOrder.num).padStart(3, "0")}</div>
+              <div style={s.summaryDate}>{entryDateShort(curOrder.ts)}</div>
+              {curOrder.name && <div style={{...s.summaryName, textAlign:"center", marginTop:10}}>{curOrder.name}</div>}
+              <div style={s.divider} />
+              {curOrder.items.map(it => (
+                <div key={it.id} style={s.ordItem}>
+                  <button style={{...s.checkBtn, background: it.done ? ordColor(it.rid) : "transparent", borderColor: ordColor(it.rid)}} onClick={()=>toggleItemDone(curOrder.id, it.id)}>{it.done ? "✓" : ""}</button>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{...s.ordItemTitle, textDecoration: it.done ? "line-through" : "none", opacity: it.done ? 0.5 : 1}}>{it.cups} × {ordOptionLabel(it.rid)}</div>
+                    {it.note && <div style={s.ordItemNote}>{it.note}</div>}
+                  </div>
+                  {!it.done && canPrepare(it.rid) && <button style={{...s.prepBtn, background:ordColor(it.rid)}} onClick={()=>prepareItem(it)}>{t("Preparar","Prepare")}</button>}
+                </div>
+              ))}
+              <div style={s.divider} />
+              <button style={{...s.startBtn, width:"100%", background:CUSTOM_COLOR, boxShadow:`0 8px 20px ${hexToRgba(CUSTOM_COLOR,0.35)}`, opacity:ordCapturing?0.6:1}} onClick={()=>handleDownloadOrder(curOrder)}>
+                {ordCapturing ? t("Generando imagen…","Generating image…") : t("Descargar imagen","Download image")}
+              </button>
+              <div style={s.controls}>
+                <a href={`https://wa.me/?text=${encodeURIComponent(orderText(curOrder))}`} target="_blank" rel="noopener noreferrer" style={{...s.resetBtn, flex:1, display:"flex", alignItems:"center", justifyContent:"center", textDecoration:"none"}}>WhatsApp</a>
+                <button style={{...s.resetBtn, flex:1}} onClick={()=>copyOrderText(curOrder)}>{ordCopied ? t("¡Copiado!","Copied!") : t("Copiar texto","Copy text")}</button>
+              </div>
+              <div style={s.controls}>
+                {!ordConfirm ? (
+                  <button style={{...s.resetBtn, flex:1, color:"#c0392b", borderColor:"#f0cfc9"}} onClick={()=>setOrdConfirm(true)}>{t("Eliminar pedido","Delete order")}</button>
+                ) : (
+                  <>
+                    <button style={s.resetBtn} onClick={()=>setOrdConfirm(false)}>{t("Cancelar","Cancel")}</button>
+                    <button style={{...s.startBtn, background:"#c0392b"}} onClick={()=>deleteOrder(curOrder.id)}>{t("Sí, eliminar","Yes, delete")}</button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {menuTab === "diary" && !curEntry && (
             <div>
               {library.diary.length === 0 ? (
@@ -1488,7 +1785,27 @@ function PourLab() {
             </div>
           )}
 
-          {menuTab === "diary" && curEntry && (
+          {menuTab === "orders" && ordView === "detail" && curOrder && (
+          <div style={s.hiddenCapture}>
+            <div ref={ordRef} style={s.captureCard}>
+              <div style={{...s.eyebrow, color:CUSTOM_COLOR, marginBottom:6, letterSpacing:"0.12em"}}>{t("COMANDA","ORDER")} #{String(curOrder.num).padStart(3, "0")}</div>
+              <div style={s.summaryDate}>{entryDateShort(curOrder.ts)}</div>
+              {curOrder.name && <div style={{...s.summaryName, textAlign:"center", marginTop:12}}>{curOrder.name}</div>}
+              <div style={s.divider} />
+              {curOrder.items.map(it => (
+                <div key={it.id} style={s.faseRow}>
+                  <span style={{...s.faseT, color:ordColor(it.rid), minWidth:34}}>{it.cups} ×</span>
+                  <span style={s.faseLabel}>
+                    {ordOptionLabel(it.rid)}
+                    {it.note ? <span style={{display:"block", fontSize:11.5, color:"#8a7660", marginTop:2}}>{it.note}</span> : null}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {menuTab === "diary" && curEntry && (
             <div>
               <button style={{...s.backBtn, color:curEntry.color}} onClick={()=>{ setDiaryOpenId(null); setDiaryEdit(false); setDiaryConfirm(false); }}>{t("‹ Diario","‹ Journal")}</button>
               <div style={{...s.eyebrow, color:curEntry.color, margin:"8px 0 4px"}}>{curEntry.title}</div>
@@ -1564,7 +1881,7 @@ function PourLab() {
             <div />
             <LangToggle />
           </div>
-          <div style={s.appName}>PourLab</div>
+          <div style={s.appName}>Gramito</div>
 
           <div style={s.categoryBlock}>
             <button style={{...s.recipeItemBtn, background:CUSTOM_COLOR}} onClick={openCustomSetup}>
@@ -2502,6 +2819,21 @@ const s = {
   diarySub:     { fontSize:11, color:"#8a7660", marginTop:2 },
   diaryMetrics: { fontSize:11.5, color:"#5a4636", marginTop:3 },
   chevronDark:  { color:"#c7bba8", fontSize:16 },
+  ordRow:       { marginTop:12, padding:10, background:"#fdf5ec", border:"1px solid #ecdfc9", borderRadius:12 },
+  ordRowLine:   { display:"flex", alignItems:"center", gap:8, marginTop:8 },
+  stepper:      { display:"flex", alignItems:"center", border:"1px solid #ecdfc9", borderRadius:10, background:"#fff", flexShrink:0 },
+  stepBtn:      { width:30, height:32, border:"none", background:"none", color:"#8B5A35", fontSize:16, fontWeight:700, cursor:"pointer", fontFamily:"'Helvetica Neue',Arial,sans-serif" },
+  stepVal:      { minWidth:22, textAlign:"center", fontSize:14, fontWeight:700, color:"#3d2b1f", fontFamily:"'Helvetica Neue',Arial,sans-serif" },
+  ordNote:      { flex:1, minWidth:0, height:34, padding:"0 10px", borderRadius:10, border:"1px solid #ecdfc9", fontSize:12.5, color:"#3d2b1f", background:"#fffaf5", fontFamily:"'Helvetica Neue',Arial,sans-serif", boxSizing:"border-box" },
+  ordItem:      { display:"flex", alignItems:"center", gap:10, padding:"9px 0", borderBottom:"1px solid #f5ede0", fontFamily:"'Helvetica Neue',Arial,sans-serif" },
+  checkBtn:     { width:24, height:24, borderRadius:7, border:"1.5px solid", color:"#fffdfa", fontSize:14, fontWeight:700, cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", padding:0 },
+  ordItemTitle: { fontSize:13.5, color:"#3d2b1f", fontWeight:600 },
+  ordItemNote:  { fontSize:11.5, color:"#8a7660", marginTop:2 },
+  chipGrid:     { display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 },
+  chip:         { display:"flex", alignItems:"center", gap:8, padding:"11px 12px", border:"none", borderRadius:12, color:"#fffdfa", fontSize:13, fontWeight:500, cursor:"pointer", textAlign:"left", fontFamily:"'Helvetica Neue',Arial,sans-serif" },
+  chipIcon:     { width:24, height:24, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  chipBadge:    { marginLeft:"auto", minWidth:20, height:20, padding:"0 5px", boxSizing:"border-box", borderRadius:10, background:"rgba(255,255,255,0.28)", fontSize:11.5, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" },
+  prepBtn:      { border:"none", borderRadius:9, padding:"7px 12px", color:"#fffdfa", fontSize:12, fontWeight:600, cursor:"pointer", flexShrink:0, fontFamily:"'Helvetica Neue',Arial,sans-serif" },
   mokaItem:     { display:"flex", gap:8, padding:"4px 0", fontSize:12.5, color:"#3d2b1f", lineHeight:1.45, fontFamily:"'Helvetica Neue',Arial,sans-serif" },
   mokaMark:     { fontWeight:700, minWidth:18, flexShrink:0 },
   categoryHeader:{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"11px 14px", borderRadius:10, border:"1px solid #ecdfc9", background:"#fffaf5", color:"#3d2b1f", fontSize:12.5, fontWeight:400, letterSpacing:"0.02em", fontFamily:"'Helvetica Neue',Arial,sans-serif", cursor:"pointer", userSelect:"none" },
@@ -2581,7 +2913,7 @@ const s = {
 };
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<PourLab />);
+root.render(<Gramito />);
 </script>
 </body>
 </html>
