@@ -2575,7 +2575,7 @@ function Gramito() {
 
           {cbDone && (
             <div style={s.summary}>
-              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4, marginBottom:12}}><BrewerIcon id="coldbrew" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{marginLeft:4}}>{t("Registro completado","Record complete")}</span></div>
+              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4, marginBottom:12}}><BrewerIcon id="coldbrew" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{flexBasis:"100%", textAlign:"center", marginTop:2}}>{t("Registro completado","Record complete")}</span></div>
               <div style={s.summaryHero}>
                 {cbCoffeeName && <div style={s.summaryName}>{cbCoffeeName}</div>}
                 {cbGrind && <div style={s.summaryGrind}>{cbGrind}</div>}
@@ -2619,7 +2619,7 @@ function Gramito() {
           <div style={s.hiddenCapture}>
             <div ref={cbRef} style={s.captureCard}>
               <div style={{...s.eyebrow, color:COLDBREW_COLOR, marginBottom:10}}>Cold Brew</div>
-              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4, marginBottom:12}}><BrewerIcon id="coldbrew" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{marginLeft:4}}>{t("Registro completado","Record complete")}</span></div>
+              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4, marginBottom:12}}><BrewerIcon id="coldbrew" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{flexBasis:"100%", textAlign:"center", marginTop:2}}>{t("Registro completado","Record complete")}</span></div>
               {cbCoffeeName && <div style={{...s.summaryName, textAlign:"center"}}>{cbCoffeeName}</div>}
               {cbGrind && <div style={{...s.summaryGrind, textAlign:"center"}}>{cbGrind}</div>}
               {cbAdditions && <div style={{...s.summaryGrind, textAlign:"center"}}>{cbAdditions}</div>}
@@ -2669,7 +2669,7 @@ function Gramito() {
     const mkTimeStr = mkDate.toLocaleTimeString(lang === "es" ? "es-CO" : "en-US", {hour:"2-digit",minute:"2-digit",hour12:false});
     const mkSummaryBody = (
       <>
-        <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}><BrewerIcon id="moka" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{marginLeft:4}}>{t("Extracción completada","Extraction complete")}</span></div>
+        <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}><BrewerIcon id="moka" color="#3d2b1f" size={28} px={1.7} /><TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{flexBasis:"100%", textAlign:"center", marginTop:2}}>{t("Extracción completada","Extraction complete")}</span></div>
         <div style={s.summaryDate}>{mkDateStr} · {mkTimeStr}</div>
         {(mkName || mkGrind) && (
           <div style={s.summaryHero}>
@@ -2900,7 +2900,7 @@ function Gramito() {
         {isDone && (
           <div style={s.summary}>
             <div style={{...s.eyebrow, color:recipe.color, marginBottom:16}}>{recipeName}</div>
-            <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}>{METHOD_ICON[recipeId] && <BrewerIcon id={METHOD_ICON[recipeId]} color="#3d2b1f" size={28} px={1.7} />}<TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{marginLeft:4}}>{t("Extracción completada","Extraction complete")}</span></div>
+            <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}>{METHOD_ICON[recipeId] && <BrewerIcon id={METHOD_ICON[recipeId]} color="#3d2b1f" size={28} px={1.7} />}<TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{flexBasis:"100%", textAlign:"center", marginTop:2}}>{t("Extracción completada","Extraction complete")}</span></div>
             <div style={s.summaryDate}>{dateStr} · {timeStr}</div>
 
             {(coffeeName || grind || (recipeId==="custom" && customBrewer)) && (
@@ -2942,7 +2942,7 @@ function Gramito() {
           <div style={s.hiddenCapture}>
             <div ref={summaryRef} style={s.captureCard}>
               <div style={{...s.eyebrow, color:recipe.color, marginBottom:16}}>{recipeName}</div>
-              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}>{METHOD_ICON[recipeId] && <BrewerIcon id={METHOD_ICON[recipeId]} color="#3d2b1f" size={28} px={1.7} />}<TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{marginLeft:4}}>{t("Extracción completada","Extraction complete")}</span></div>
+              <div style={{...s.summaryTitle, display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", gap:4}}>{METHOD_ICON[recipeId] && <BrewerIcon id={METHOD_ICON[recipeId]} color="#3d2b1f" size={28} px={1.7} />}<TabIcon id="recipes" color="#3d2b1f" size={34} px={1.7} /><span style={{flexBasis:"100%", textAlign:"center", marginTop:2}}>{t("Extracción completada","Extraction complete")}</span></div>
               <div style={s.summaryDate}>{dateStr} · {timeStr}</div>
 
               {(coffeeName || grind || (recipeId==="custom" && customBrewer)) && (
