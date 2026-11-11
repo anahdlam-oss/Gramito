@@ -455,6 +455,139 @@ function MiniIcon({ id, color, size = 16 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">{body}</svg>;
 }
 
+// ---- Metadatos incrustados en las imágenes PNG descargadas (chunks iTXt, UTF-8) ----
+const PNG_CRC_TABLE = (() => {
+  const tbl = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    tbl[n] = c >>> 0;
+  }
+  return tbl;
+})();
+
+function pngCrc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = PNG_CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function makeITXt(keyword, text) {
+  const enc = new TextEncoder();
+  const kw = enc.encode(keyword);
+  const tx = enc.encode(text);
+  // keyword + 0 + flag compresión (0) + método compresión (0) + idioma vacío + 0 + palabra traducida vacía + 0 + texto UTF-8
+  const data = new Uint8Array(kw.length + 5 + tx.length);
+  data.set(kw, 0);
+  data.set(tx, kw.length + 5);
+  const type = enc.encode("iTXt");
+  const chunk = new Uint8Array(12 + data.length);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, data.length);
+  chunk.set(type, 4);
+  chunk.set(data, 8);
+  const crcInput = new Uint8Array(4 + data.length);
+  crcInput.set(type, 0);
+  crcInput.set(data, 4);
+  dv.setUint32(8 + data.length, pngCrc32(crcInput));
+  return chunk;
+}
+
+function injectPngChunks(bytes, fields) {
+  const sig = [137, 80, 78, 71, 13, 10, 26, 10];
+  for (let i = 0; i < 8; i++) if (bytes[i] !== sig[i]) return bytes;
+  const chunks = (fields || [])
+    .filter(f => f && f[0] && f[1] !== undefined && f[1] !== null && String(f[1]).trim() !== "")
+    .map(f => makeITXt(f[0], String(f[1])));
+  if (!chunks.length) return bytes;
+  const insertAt = 33; // firma PNG (8) + chunk IHDR (25)
+  const total = chunks.reduce((a, c) => a + c.length, 0);
+  const out = new Uint8Array(bytes.length + total);
+  out.set(bytes.subarray(0, insertAt), 0);
+  let off = insertAt;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  out.set(bytes.subarray(insertAt), off);
+  return out;
+}
+
+function readBlobBuffer(b) {
+  if (b.arrayBuffer) return b.arrayBuffer();
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(b); });
+}
+
+async function pngWithMetadata(blob, fields) {
+  const buf = new Uint8Array(await readBlobBuffer(blob));
+  return new Blob([injectPngChunks(buf, fields)], { type: "image/png" });
+}
+
+// Cada vez que se guarda un PNG desde un canvas y hay metadatos listos (window.__gramitoMeta), se incrustan.
+(function installPngMetadata() {
+  if (typeof HTMLCanvasElement === "undefined" || HTMLCanvasElement.prototype.__gramitoPatched) return;
+  const origToBlob = HTMLCanvasElement.prototype.toBlob;
+  HTMLCanvasElement.prototype.toBlob = function (cb, type, q) {
+    const meta = window.__gramitoMeta;
+    if (!meta || (type && type !== "image/png")) return origToBlob.call(this, cb, type, q);
+    return origToBlob.call(this, blob => {
+      if (!blob) { cb(blob); return; }
+      pngWithMetadata(blob, meta).then(cb, () => cb(blob));
+    }, type, q);
+  };
+  const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+  HTMLCanvasElement.prototype.toDataURL = function (type, q) {
+    const url = origToDataURL.call(this, type, q);
+    const meta = window.__gramitoMeta;
+    if (!meta || typeof url !== "string" || url.indexOf("data:image/png") !== 0) return url;
+    try {
+      const bin = atob(url.split(",")[1]);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      const out = injectPngChunks(bytes, meta);
+      let s = "";
+      for (let i = 0; i < out.length; i += 0x8000) s += String.fromCharCode.apply(null, out.subarray(i, i + 0x8000));
+      return "data:image/png;base64," + btoa(s);
+    } catch (e) { return url; }
+  };
+  HTMLCanvasElement.prototype.__gramitoPatched = true;
+})();
+
+// Separa el texto de molienda en Moledor (ej. K6) y Molienda (ej. 90 clics, fino, grueso...)
+function splitGrind(str) {
+  let s = (str || "").trim();
+  if (!s) return { moledor: "", molienda: "" };
+  const parts = [];
+  const clickRe = /(\d+(?:[.,]\d+)?\s*(?:clics?|clicks?)\b|\b(?:clics?|clicks?)\s*\d+(?:[.,]\d+)?)/i;
+  const wordRe = /\b(extra[\s-]+(?:fin[oa]s?|grues[oa]s?|fine|coarse)|medi[oa]s?[\s-]+(?:fin[oa]s?|grues[oa]s?)|medium[\s-]+(?:fine|coarse)|fin[oa]s?|grues[oa]s?|medi[oa]s?|fine|medium|coarse)\b/i;
+  [clickRe, wordRe].forEach(re => {
+    const m = s.match(re);
+    if (m) {
+      parts.push(m[0].trim());
+      s = s.slice(0, m.index) + " " + s.slice(m.index + m[0].length);
+    }
+  });
+  if (parts.length === 0) {
+    const segs = s.split(/\s*[•·|;]\s*/).map(x => x.trim()).filter(Boolean);
+    if (segs.length >= 2) return { moledor: segs[0], molienda: segs.slice(1).join(" · ") };
+  }
+  const moledor = s.replace(/^[\s•·|,;\/\-–—]+/, "").replace(/[\s•·|,;\/\-–—]+$/, "").replace(/\s{2,}/g, " ").trim();
+  return { moledor, molienda: parts.join(" · ") };
+}
+
+function grindMeta(K, str) {
+  const g = splitGrind(str);
+  return [[K("Moledor","Grinder"), g.moledor], [K("Molienda","Grind"), g.molienda]];
+}
+
+const META_RECIPE_NAMES = {
+  ultimate:        ["V60 Hoffmann definitivo", "V60 Hoffmann ultimate"],
+  onecup:          ["V60 una taza", "V60 one cup"],
+  frenchpress4min: ["Prensa francesa 4 minutos", "French press 4-minute"],
+  aeropress:       ["AeroPress Hoffmann definitivo", "AeroPress Hoffmann ultimate"],
+  aeropresssoup:   ["AeroPress Soup (Zuppa lunga) Lance Hedrick", "AeroPress Soup (Zuppa lunga) Lance Hedrick"],
+  clothfilter:     ["Filtro de tela Hoffmann", "Cloth filter Hoffmann"],
+  melitta:         ["Melitta Hoffmann", "Melitta Hoffmann"],
+  chemex:          ["Chemex Hoffmann", "Chemex Hoffmann"],
+};
+
 const RECIPE_VIDEOS = {
   ultimate:  "https://www.youtube.com/watch?v=AI4ynXzkSQo",
   melitta:   "https://www.youtube.com/watch?v=AI4ynXzkSQo",
@@ -879,6 +1012,113 @@ function Gramito() {
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok).catch(() => {});
     } catch (e) {}
   }
+
+  function orderIcon(rid, size) {
+    const key = METHOD_ICON[rid] || rid;
+    if (["v60","prensa","aeropress","cloth","melitta","chemex","moka","coldbrew"].includes(key)) {
+      return <BrewerIcon id={key} color="#fffdfa" size={size} px={1.6} />;
+    }
+    return <TabIcon id="recipes" color="#fffdfa" size={size} />;
+  }
+
+  // Metadatos para el PNG que se descargaría en la pantalla actual (o null si no aplica)
+  function computePngMeta() {
+    const pad = n => String(n).padStart(2, "0");
+    const dateISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const timeHM = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const K = (es, en) => lang === "en" ? en : es;
+    const dt = d => [[K("Fecha","Date"), dateISO(d)], [K("Hora","Time"), timeHM(d)]];
+    const ratioOf = (c, w) => (c > 0 && w > 0) ? `1:${Math.floor((w / c) * 10 + 1e-9) / 10}` : "";
+    const now = new Date();
+    const sc = String(screen).toLowerCase();
+
+    // Comanda
+    if (screen === "menu" && menuTab === "orders" && ordView === "detail" && ordOpenId) {
+      const o = orders.find(x => x.id === ordOpenId);
+      if (!o) return null;
+      return [
+        [K("Pedido","Order"), String(o.num).padStart(3, "0")],
+        [K("Nombre_o_mesa","Name_or_table"), o.name],
+        ...dt(new Date(o.ts)),
+        [K("Bebidas","Drinks"), o.items.map(it => `${it.cups} × ${ordOptionLabel(it.rid)}${it.note ? ` (${it.note})` : ""}`).join("\n")],
+      ];
+    }
+
+    // Cafetera italiana
+    if (screen === "moka" && mkDone && mkFinishedAt) {
+      const c = parseFloat(mkCoffeeG), w = parseFloat(mkWaterML);
+      return [
+        ...dt(new Date(mkFinishedAt)),
+        [K("Metodo","Method"), ordOptionLabel("moka")],
+        [K("Receta","Recipe"), K("Cafetera italiana Hoffmann","Moka Pot Hoffmann")],
+        [K("Cafe","Coffee"), mkName],
+        ...grindMeta(K, mkGrind),
+        [K("Ml_agua","Water_ml"), w > 0 ? String(mkWaterML) : ""],
+        [K("Gramos_cafe","Coffee_g"), c > 0 ? String(mkCoffeeG) : ""],
+        ["Ratio", ratioOf(c, w)],
+        [K("Tiempo_total","Total_time"), fmtTime(mkElapsed)],
+      ];
+    }
+
+    // Resumen de extracción
+    if (screen === "app" && isDone && recipe) {
+      const total = Math.round(coffeeG * (1000 / recipe.ratioGPerL));
+      const catId = METHOD_ICON[recipeId];
+      const methodName = catId ? ordOptionLabel(catId) : ((customBrewer || "").trim() || K("Personalizada","Custom"));
+      const names = META_RECIPE_NAMES[recipeId];
+      const recipeName = names ? K(names[0], names[1]) : K("Receta personalizada","Custom recipe");
+      return [
+        ...dt(now),
+        [K("Metodo","Method"), methodName],
+        [K("Receta","Recipe"), recipeName],
+        [K("Cafe","Coffee"), coffeeName],
+        ...grindMeta(K, grind),
+        [K("Ml_agua","Water_ml"), String(total)],
+        [K("Gramos_cafe","Coffee_g"), String(coffeeG)],
+        ["Ratio", `1:${Math.floor((1000 / recipe.ratioGPerL) * 10 + 1e-9) / 10}`],
+        [K("Tiempo_total","Total_time"), fmtTime(totalElapsed)],
+      ];
+    }
+
+    // Cold Brew (registro)
+    const isCb = sc.indexOf("cold") >= 0 || sc.indexOf("cb") >= 0;
+    const isCup = sc.indexOf("cup") >= 0 || sc.indexOf("cata") >= 0 || sc.indexOf("tast") >= 0;
+    if (cbDone && (isCb || (!isCup && !cupDone))) {
+      const water = Math.round(cbCoffeeG * cbRatio);
+      return [
+        ...dt(now),
+        [K("Metodo","Method"), "Cold Brew"],
+        [K("Cafe","Coffee"), cbCoffeeName],
+        ...grindMeta(K, cbGrind),
+        [K("Ml_agua","Water_ml"), String(water)],
+        [K("Gramos_cafe","Coffee_g"), String(cbCoffeeG)],
+        ["Ratio", `1:${cbRatio}`],
+        [K("Reposo","Steep_time"), formatSteepDuration(cbStart, cbEnd, lang)],
+        [K("Inicio","Start"), formatDatetimeDisplay(cbStart, lang)],
+        [K("Fin","End"), formatDatetimeDisplay(cbEnd, lang)],
+        [K("Adiciones","Additions"), cbAdditions],
+      ];
+    }
+
+    // Ficha de cata (no lleva receta)
+    if (cupDone && (isCup || !cbDone)) {
+      const c = parseFloat(cupCoffeeG), w = parseFloat(cupWaterG);
+      return [
+        ...dt(now),
+        [K("Metodo","Method"), cupMethod],
+        [K("Cafe","Coffee"), cupCoffee],
+        [K("Variedad","Variety"), cupVariety],
+        [K("Proceso","Process"), cupProcess],
+        ...grindMeta(K, cupGrind),
+        ["Ratio", ratioOf(c, w)],
+        [K("Puntuacion","Score"), cupScore.toFixed(1)],
+        [K("Comentarios","Comments"), cupComments],
+      ];
+    }
+    return null;
+  }
+
+  window.__gramitoMeta = computePngMeta();
 
   function handleDownloadOrder(o) {
     if (!ordRef.current || !window.html2canvas) return;
@@ -1788,13 +2028,14 @@ function Gramito() {
           {menuTab === "orders" && ordView === "detail" && curOrder && (
           <div style={s.hiddenCapture}>
             <div ref={ordRef} style={s.captureCard}>
-              <div style={{...s.eyebrow, color:CUSTOM_COLOR, marginBottom:6, letterSpacing:"0.12em"}}>{t("COMANDA","ORDER")} #{String(curOrder.num).padStart(3, "0")}</div>
+              <div style={{...s.eyebrow, color:CUSTOM_COLOR, marginBottom:6, letterSpacing:"0.12em", display:"flex", alignItems:"center", justifyContent:"center", gap:6}}><TabIcon id="recipes" color={CUSTOM_COLOR} size={22} /><span>{t("COMANDA","ORDER")} #{String(curOrder.num).padStart(3, "0")}</span></div>
               <div style={s.summaryDate}>{entryDateShort(curOrder.ts)}</div>
               {curOrder.name && <div style={{...s.summaryName, textAlign:"center", marginTop:12}}>{curOrder.name}</div>}
               <div style={s.divider} />
               {curOrder.items.map(it => (
-                <div key={it.id} style={s.faseRow}>
-                  <span style={{...s.faseT, color:ordColor(it.rid), minWidth:34}}>{it.cups} ×</span>
+                <div key={it.id} style={{...s.faseRow, alignItems:"center", padding:"7px 0"}}>
+                  <span style={{width:30, height:30, borderRadius:9, background:ordColor(it.rid), display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>{orderIcon(it.rid, 22)}</span>
+                  <span style={{...s.faseT, color:ordColor(it.rid), minWidth:30}}>{it.cups} ×</span>
                   <span style={s.faseLabel}>
                     {ordOptionLabel(it.rid)}
                     {it.note ? <span style={{display:"block", fontSize:11.5, color:"#8a7660", marginTop:2}}>{it.note}</span> : null}
