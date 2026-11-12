@@ -1066,7 +1066,9 @@ function Gramito() {
       const catId = METHOD_ICON[recipeId];
       const methodName = catId ? ordOptionLabel(catId) : ((customBrewer || "").trim() || K("Personalizada","Custom"));
       const names = META_RECIPE_NAMES[recipeId];
-      const recipeName = names ? K(names[0], names[1]) : (recipe.shortName ? t(recipe.shortName.es, recipe.shortName.en) : K("Mi receta","My recipe"));
+      const baseName = recipe.shortName ? t(recipe.shortName.es, recipe.shortName.en) : K("Mi receta","My recipe");
+      const brewerTxt = (customBrewer || "").trim();
+      const recipeName = names ? K(names[0], names[1]) : (brewerTxt ? `${baseName} · ${brewerTxt}` : baseName);
       return [
         ...dt(now),
         [K("Metodo","Method"), methodName],
