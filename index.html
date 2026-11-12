@@ -555,7 +555,7 @@ function splitGrind(str) {
   let s = (str || "").trim();
   if (!s) return { moledor: "", molienda: "" };
   const parts = [];
-  const clickRe = /(\d+(?:[.,]\d+)?\s*(?:clics?|clicks?)\b|\b(?:clics?|clicks?)\s*\d+(?:[.,]\d+)?)/i;
+  const clickRe = /(\d+(?:[.,]\d+)?\s*(?:clics?|clicks?)\b|\b(?:clics?|clicks?)\s*\d+(?:[.,]\d+)?|\b(?:clics?|clicks?)\b)/i;
   const wordRe = /\b(extra[\s-]+(?:fin[oa]s?|grues[oa]s?|fine|coarse)|medi[oa]s?[\s-]+(?:fin[oa]s?|grues[oa]s?)|medium[\s-]+(?:fine|coarse)|fin[oa]s?|grues[oa]s?|medi[oa]s?|fine|medium|coarse)\b/i;
   [clickRe, wordRe].forEach(re => {
     const m = s.match(re);
@@ -1066,7 +1066,7 @@ function Gramito() {
       const catId = METHOD_ICON[recipeId];
       const methodName = catId ? ordOptionLabel(catId) : ((customBrewer || "").trim() || K("Personalizada","Custom"));
       const names = META_RECIPE_NAMES[recipeId];
-      const recipeName = names ? K(names[0], names[1]) : (recipe.name ? t(recipe.name.es, recipe.name.en) : K("Mi receta","My recipe"));
+      const recipeName = names ? K(names[0], names[1]) : (recipe.shortName ? t(recipe.shortName.es, recipe.shortName.en) : K("Mi receta","My recipe"));
       return [
         ...dt(now),
         [K("Metodo","Method"), methodName],
